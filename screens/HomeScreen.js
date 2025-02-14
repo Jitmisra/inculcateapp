@@ -1,239 +1,418 @@
-import { View, Text, SafeAreaView, TextInput, TouchableOpacity, ScrollView } from 'react-native'
-import React, { useCallback, useEffect } from 'react' 
-import { StatusBar } from 'expo-status-bar'
-import { Image } from 'react-native'
-import { theme } from '../theme'
-import {MagnifyingGlassIcon} from 'react-native-heroicons/outline'
-import { CalendarDaysIcon, MapPin, MapPinIcon } from 'react-native-heroicons/solid'
-import {debounce, set} from 'lodash'
-import { fetchLocations, fetchWeatherForecast } from '../api/weather'
-import { weatherImages } from '../constants'
+import { 
+  ImageBackground, 
+  Text, 
+  View, 
+  SafeAreaView, 
+  Image, 
+  ScrollView, 
+  TouchableOpacity,
+  StatusBar,
+  Platform,
+  RefreshControl
+} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import CustomTab from './CustomTabBar.js';
+import Header from '../components/TransparentHeader.js';
 
+const TrendingCard = ({ image, title, description, onPress }) => (
+  <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
+    <View 
+      className="w-[348px] h-[273px] bg-white rounded-xl mx-4"
+      style={{
+        shadowColor: "#FFEAE2",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        elevation: 4,
+      }}
+    >
+      <Image 
+        source={typeof image === 'string' ? { uri: image } : image}
+        className="w-full h-[180px] rounded-t-xl"
+        resizeMode="cover"
+      />
+      <View className="p-4">
+        <Text className="text-[18px] font-bold text-[#25252D]">{title}</Text>
+        <Text className="text-[12px] text-[#8A819D] mt-2">{description}</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
 
+const Homescreen = () => {
+  const navigation = useNavigation();
+  const [activeTab, setActiveTab] = useState('Homescreen');
+  const [trendingData, setTrendingData] = useState([]);
+  const [allData, setAllData] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-export default function HomeScreen() {
-  const [showSearch,toggleSearch] = React.useState(false)
-  const [locations, setLocations] = React.useState([])
-  const [weather, setWeather] = React.useState({})
-
- 
-  
-
-  const handleSearch = value => {
-      if(value.length>2){
-        fetchLocations({cityName: value}).then(data=>{
-          setLocations(data);
-        })
-        
-      }
-    
-  }
-  const handleLocation = (loc) => {
-    console.log('location: ', loc);
-    setLocations([]);
-    toggleSearch(false);
-    fetchWeatherForecast({
-      cityName: loc.name,
-      days: '7',
-    }).then((data) => {
-      setWeather(data);
-      
-      console.log('got forecast: ', data);
-    });
-  };
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await axios.get('https://run.mocky.io/v3/2756fccd-da51-4203-b977-85b095f46a26');
+      const formattedData = response.data.map(item => ({
+        id: item.id,
+        category: item.category,
+        image: item.imageUrl,
+        title: item.title,
+        description: item.description,
+        description2: item.description2,
+        longarticle: item.longarticle || [] // include longarticle for LongPage
+      }));
+      setAllData(formattedData);
+      setTrendingData(formattedData.slice(0, 7));
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchMyWeatherData();
-  }, []);
-  
-  const fetchMyWeatherData = async () => {
-    fetchWeatherForecast({
-      cityName: 'New Delhi',
-      days: '7'
-    }).then(data => {
-      setWeather(data);
-    });
-  };
-  const handleTextDebounce =useCallback(debounce(handleSearch,1200),[]);
-  const {current, location} = weather;
-   
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, [fetchData]);
+
+  const categoriesData = [
+    {
+      image: require('../assets/images/Icons/Catagories/Indian.png'),
+      title: "Indian"
+    },
+    {
+      image: require('../assets/images/Icons/Catagories/International.png'),
+      title: "International"
+    },
+    {
+      image: require('../assets/images/Icons/Catagories/Astronomy.png'),
+      title: "Astronomy"
+    },
+    {
+      image: require('../assets/images/Icons/Catagories/Metallurgy.png'),
+      title: "Metallurgy"
+    },
+    {
+      image: require('../assets/images/Icons/Catagories/Science.png'),
+      title: "Science"
+    },
+    {
+      image: require('../assets/images/Icons/Catagories/Technology.png'),
+      title: "Technology"
+    }
+  ];
+
   return (
-    <View className="flex-1 relative">
-      <StatusBar style="light" />
-      <Image 
-        blurRadius={70} 
-        source={require('../assets/images/bg.png')}
-        className="absolute h-full w-full"
+    <View className="flex-1 bg-[#FFC4AF]">
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
       />
-      <SafeAreaView className="flex flex-1">
-        
-        <View style={{height: '7%'}} className="mx-4 relative z-50">
-          <View 
-            className="flex-row justify-end items-center rounded-full"
-            style={{backgroundColor: showSearch?theme.bgWhite(0.2):"transparent"}}
-          >
-            {
-              showSearch?(
-                <TextInput 
-              onChangeText={handleTextDebounce}
-              placeholder='Search city'
-              placeholderTextColor={'lightgray'}
-              className="pl-6 pb-1 h-10 flex-1 text-base text-white"
-            />
-
-              ):null
-              
-            }
-            
-            <TouchableOpacity style={{backgroundColor: theme.bgWhite(0.3)}} className="rounded-full p-3 m-1" onPress={() => toggleSearch(!showSearch)}>
-              <MagnifyingGlassIcon size={24} color={'white'} />
-              </TouchableOpacity>
-          </View>
-          {
-            locations.length>0 && showSearch ? (
-              <View className="absolute top-16 w-full z-50 rounded-3xl bg-white ">
-                {
-                  locations.map((loc,index)=>{
-                    let showBorder= index+1 != locations.length
-                    let borderClass = showBorder?'border-b-2 border-b-gray-500':''
-                    return (
-                      <TouchableOpacity 
-                      onPress={()=> handleLocation(loc)}
-                      key={index}
-                      className={"flex-row items-center border-0 p-3 px-4 mb-1 "+borderClass}
-                      >
-
-                        <MapPinIcon size={20} color={'gray'} />
-                        <Text className="text-black text-lg ml-2">{loc?.name},{loc?.country}</Text>
-                      </TouchableOpacity>
-                    )
-                  })
-                }
-              </View>
-              
-            ):null
-          }
-        </View>
-        {/* forecast section */}
-<View className="mx-4 flex justify-around flex-1 mb-2">
-  {/* location */}
-  <Text className="text-white text-center text-2xl font-bold">
-    {location?.name},
-    <Text className="text-lg font-semibold text-gray-300">
-       {" "+location?.country}
-    </Text>
-  </Text>
-  {/* weather image */}
-  <View className="flex-row justify-center">
-    <Image
-    // source={{uri: `https:${current?.condition?.icon}`}}
-      source={weatherImages[current?.condition?.text]}
-      className="w-52 h-52"
-    />
-  </View>
-  {/* degree celcius */}
-  <View className="space-y-2">
-    <Text className="text-center font-bold text-white text-6xl ml-5">
-      {current?.temp_c}&#176;
-    </Text>
-    <Text className="text-center text-white text-xl ml-5 tracking-widest">
-      {current?.condition?.text}
-      </Text>
-  </View>
-
-<View className="flex-row justify-between mx-4">
-  <View className="flex-row space-x-2 items-center">
-    <Image source={require('../assets/icons/wind.png')} className="h-6 w-6 " />
-    <Text className="text-white font-semibold text-base ml-1">
-      {current?.wind_kph}km
-    </Text>
-  </View>
-  <View className="flex-row space-x-2 items-center">
-    <Image source={require('../assets/icons/drop.png')} className="h-6 w-6"/>
-    <Text className="text-white font-semibold text-base ml-1">
-      {current?.humidity}%
-    </Text>
-  </View>
-  <View className="flex-row space-x-2 items-center">
-    <Image source={require('../assets/icons/Sun.png')} className="h-8 w-8"/>
-    <Text className="text-white font-semibold text-base ml-1">
-     {weather?.forecast?.forecastday[0]?.astro?.sunrise}
-    </Text>
-  </View>
-  </View>
-</View>
-<View className="mb-2 space-y-3">
-  <View className="flex-row items-center mx-5 space-x-2 mb-5">
-    <CalendarDaysIcon size="22" color="white" />
-    <Text className="text-white text-base">Daily forecast</Text>
-  </View>
-  <ScrollView
-  horizontal
-  contentContainerStyle={{ paddingHorizontal: 15 }}
-  showsHorizontalScrollIndicator={false}
->
-  {weather?.forecast?.forecastday?.map((item, index) => {
-    let date = new Date(item.date);
-    let options = { weekday: 'long' };
-    let dayName = date.toLocaleDateString('en-US', options);
-    dayName = dayName.split(',')[0];
-    return (
-      <View
-        key={index}
-        className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4"
-        style={{ backgroundColor: theme.bgWhite(0.15) }}
+      <ImageBackground 
+        source={require('../assets/images/backgrounds/Home-background.png')} 
+        className="flex-1 w-full h-full"
       >
-        <Image
-          source={weatherImages[item?.day?.condition?.text]}
-          className="h-11 w-11"
-        />
-        <Text className="text-white">{dayName}</Text>
-        <Text className="text-white text-xl font-semibold">
-          {item?.day?.avgtemp_c}&#176;
-        </Text>
-      </View>
-    );
-  })}
-</ScrollView>
-    
-    {/* <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Monday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
+        <SafeAreaView 
+          style={{
+            flex: 1,
+            paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+          }}
+        >
+          <Header />
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FF6A34"      // iOS refresh indicator color
+                colors={['#FF6A34']}     // Android refresh indicator color
+              />
+            }
+          >
+            {/* Welcome Section */}
+            <View className="px-4 mt-6 items-center">
+              <View className="flex-row justify-center">
+                <Text className="text-[#25252D] text-[25px] font-bold">Welcome back </Text>
+                <Text className="text-[#FF6A34] text-[25px] font-bold">Agnik!</Text>
+              </View>
+              <Text className="text-[#25252D] text-[20px] mt-1 font-semibold">
+                Ready to in.culcate?
+              </Text>
+            </View>
+
+            {/* Trending Section */}
+            <View className="mt-6">
+              <Text className="text-[20px] font-bold text-[#25252D] px-4 mb-4">
+                Trending Now
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {trendingData.map((item, index) => (
+                  <TrendingCard
+                    key={index}
+                    image={item.image}
+                    title={item.title}
+                    description={item.description}
+                    onPress={() => navigation.navigate('SwipePage', { articleId: item.id, data: allData })}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Categories Section */}
+            <View className="mt-6">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {categoriesData.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 150,
+                      height: 100,
+                      backgroundColor: 'white',
+                      borderRadius: 15,
+                      marginRight: 10,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      shadowColor: "#FFEAE2",
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 1,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }}
+                    onPress={() => {
+                      const filteredData = allData.filter(article =>
+                        article.category.toLowerCase().includes(item.title.toLowerCase())
+                      );
+                      navigation.navigate('SwipePage', { 
+                        category: item.title, 
+                        data: filteredData 
+                      });
+                    }}
+                  >
+                    <Image 
+                      source={item.image}
+                      style={{width: 50, height: 50, resizeMode: 'contain'}}
+                    />
+                    <Text className="text-[14px] font-bold text-[#25252D] mt-2">
+                      {item.title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </ScrollView>
+          <CustomTab activeTab={activeTab} onTabPress={setActiveTab} />
+        </SafeAreaView>
+      </ImageBackground>
     </View>
-    <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Tuesday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
-    </View>
-    <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Wednesday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
-    </View>
-    <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Thursday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
-    </View>
-    <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Friday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
-    </View>
-    <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Saturday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
-    </View>
-    <View className="flex justify-center items-center w-24 rounded-3xl py-3 space-y-1 mr-4" style={{ backgroundColor: theme.bgWhite(0.15) }}>
-      <Image source={require('../assets/images/heavyrain.png')} className="h-11 w-11" />
-      <Text className="text-white">Sunday</Text>
-      <Text className="text-white text-xl font-semibold">13&#176;</Text>
-    </View> */}
-  
-</View>
-      </SafeAreaView>
-    </View>
-  )
-}
+  );
+};
+
+export default Homescreen;
+
+
+
+
+// import { 
+//   ImageBackground, 
+//   Text, 
+//   View, 
+//   SafeAreaView, 
+//   Image, 
+//   ScrollView, 
+//   TouchableOpacity,
+//   StatusBar,
+//   Platform
+// } from 'react-native';
+// import React, { useState, useEffect } from 'react';
+// import { useNavigation } from '@react-navigation/native';
+// import axios from 'axios';
+// import CustomTab from './CustomTabBar';
+// import Header from '../components/TransparentHeader';
+
+// const TrendingCard = ({ image, title, description, onPress }) => (
+//   <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
+//     <View 
+//       className="w-[348px] h-[273px] bg-white rounded-xl mx-4"
+//       style={{
+//         shadowColor: "#FFEAE2",
+//         shadowOffset: { width: 0, height: 0 },
+//         shadowOpacity: 1,
+//         shadowRadius: 4,
+//         elevation: 4,
+//       }}
+//     >
+//       <Image 
+//         source={typeof image === 'string' ? { uri: image } : image}
+//         className="w-full h-[180px] rounded-t-xl"
+//         resizeMode="cover"
+//       />
+//       <View className="p-4">
+//         <Text className="text-[18px] font-bold text-[#25252D]">{title}</Text>
+//         <Text className="text-[12px] text-[#8A819D] mt-2">{description}</Text>
+//       </View>
+//     </View>
+//   </TouchableOpacity>
+// );
+
+// const Homescreen = () => {
+//   const navigation = useNavigation();
+//   const [activeTab, setActiveTab] = useState('Homescreen');
+//   const [trendingData, setTrendingData] = useState([]);
+//   const [allData, setAllData] = useState([]);
+
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       try {
+//         const response = await axios.get('http://10.12.0.17:3000/admin/api/articles');
+//         const formattedData = response.data.map(item => ({
+//           id: item._id,
+//           category: item.category,
+//           image: item.imageUrl,
+//           title: item.title,
+//           description: item.description,
+//           description2: item.description2
+//         }));
+//         setAllData(formattedData);
+//         setTrendingData(formattedData.slice(0, 7));
+//       } catch (error) {
+//         console.error('Error fetching data:', error);
+//       }
+//     };
+//     fetchData();
+//   }, []);
+
+//   const categoriesData = [
+//     {
+//       image: require('../assets/images/Icons/Catagories/Indian.png'),
+//       title: "Indian"
+//     },
+//     {
+//       image: require('../assets/images/Icons/Catagories/International.png'),
+//       title: "International"
+//     },
+//     {
+//       image: require('../assets/images/Icons/Catagories/Astronomy.png'),
+//       title: "Astronomy"
+//     },
+//     {
+//       image: require('../assets/images/Icons/Catagories/Metallurgy.png'),
+//       title: "Metallurgy"
+//     },
+//     {
+//       image: require('../assets/images/Icons/Catagories/Science.png'),
+//       title: "Science"
+//     },
+//     {
+//       image: require('../assets/images/Icons/Catagories/Technology.png'),
+//       title: "Technology"
+//     }
+//   ];
+
+//   return (
+//     <View className="flex-1 bg-[#FFC4AF]">
+//       <StatusBar
+//         translucent
+//         backgroundColor="transparent"
+//         barStyle="dark-content"
+//       />
+//       <ImageBackground 
+//         source={require('../assets/images/backgrounds/Home-background.png')} 
+//         className="flex-1 w-full h-full"
+//       >
+//         <SafeAreaView 
+//           style={{
+//             flex: 1,
+//             paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+//           }}
+//         >
+//           <Header />
+//           <ScrollView 
+//             showsVerticalScrollIndicator={false}
+//             contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+//           >
+//             {/* Welcome Section */}
+//             <View className="px-4 mt-6 items-center">
+//               <View className="flex-row justify-center">
+//                 <Text className="text-[#25252D] text-[25px] font-bold">Welcome back </Text>
+//                 <Text className="text-[#FF6A34] text-[25px] font-bold">Agnik!</Text>
+//               </View>
+//               <Text className="text-[#25252D] text-[20px] mt-1 font-semibold">
+//                 Ready to in.culcate?
+//               </Text>
+//             </View>
+
+//             {/* Trending Section */}
+//             <View className="mt-6">
+//               <Text className="text-[20px] font-bold text-[#25252D] px-4 mb-4">
+//                 Trending Now
+//               </Text>
+//               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+//                 {trendingData.map((item, index) => (
+//                   <TrendingCard
+//                     key={index}
+//                     image={item.image}
+//                     title={item.title}
+//                     description={item.description}
+//                     onPress={() => navigation.navigate('SwipePage', { articleId: item.id, data: allData })}
+//                   />
+//                 ))}
+//               </ScrollView>
+//             </View>
+
+//             {/* Categories Section */}
+//             <View className="mt-6">
+//               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+//                 {categoriesData.map((item, index) => (
+//                   <TouchableOpacity
+//                     key={index}
+//                     activeOpacity={0.8}
+//                     style={{
+//                       width: 150,
+//                       height: 100,
+//                       backgroundColor: 'white',
+//                       borderRadius: 15,
+//                       marginRight: 10,
+//                       justifyContent: 'center',
+//                       alignItems: 'center',
+//                       shadowColor: "#FFEAE2",
+//                       shadowOffset: { width: 0, height: 0 },
+//                       shadowOpacity: 1,
+//                       shadowRadius: 4,
+//                       elevation: 4,
+//                     }}
+//                     onPress={() => {
+//                       const filteredData = allData.filter(article =>
+//                         article.category.toLowerCase().includes(item.title.toLowerCase())
+//                       );
+//                       navigation.navigate('SwipePage', { 
+//                         category: item.title, 
+//                         data: filteredData 
+//                       });
+//                     }}
+//                   >
+//                     <Image 
+//                       source={item.image}
+//                       style={{width: 50, height: 50, resizeMode: 'contain'}}
+//                     />
+//                     <Text className="text-[14px] font-bold text-[#25252D] mt-2">
+//                       {item.title}
+//                     </Text>
+//                   </TouchableOpacity>
+//                 ))}
+//               </ScrollView>
+//             </View>
+//           </ScrollView>
+//           <CustomTab activeTab={activeTab} onTabPress={setActiveTab} />
+//         </SafeAreaView>
+//       </ImageBackground>
+//     </View>
+//   );
+// };
+
+// export default Homescreen;
