@@ -1,4 +1,4 @@
-package com.movie
+package com.agnikmisra.MOVIE
 
 import android.app.Application
 import android.content.res.Configuration

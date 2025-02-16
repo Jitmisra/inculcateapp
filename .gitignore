@@ -16,6 +16,9 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+# Native project folders
+
+
 
 # Metro
 .metro-health-check*
