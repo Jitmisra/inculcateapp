@@ -23,22 +23,25 @@ const removeStars = (text) => {
   return text.replace(/\*+/g, '').trim();
 };
 
-// Update the cleanTextContent function to handle HTML entities
+// Baigan Ka Editor Js Clean Ups
 const cleanTextContent = (text) => {
   if (!text) return '';
   return text
-    .replace(/&nbsp;/g, ' ')          // Replace &nbsp; with space
-    .replace(/&amp;/g, '&')            // Replace &amp; with &
-    .replace(/&lt;/g, '<')             // Replace &lt; with <
-    .replace(/&gt;/g, '>')             // Replace &gt; with >
-    .replace(/&quot;/g, '"')           // Replace &quot; with "
-    .replace(/&#39;/g, "'")            // Replace &#39; with '
-    .replace(/ data-empty="(?:true|false)"/g, '') // Remove data-empty attributes
-    .replace(/\*+/g, '')              // Remove stars
+    .replace(/&nbsp;/g, ' ')                           // Replace &nbsp; with space
+    .replace(/&amp;/g, '&')                             // Replace &amp; with &
+    .replace(/&lt;/g, '<')                              // Replace &lt; with <
+    .replace(/&gt;/g, '>')                              // Replace &gt; with >
+    .replace(/&quot;/g, '"')                            // Replace &quot; with "
+    .replace(/&#39;/g, "'")                             // Replace &#39; with '
+    .replace(/ data-empty="(?:true|false)"/g, '')        // Remove data-empty attributes
+    .replace(/<\/?ul>/g, '')                            // Remove <ul> and </ul> tags
+    .replace(/<\/?li>/g, '')                            // Remove <li> and </li> tags
+    .replace(/<br\s*\/?>/gi, ' ')                        // Remove <br> tags
+    .replace(/\*+/g, '')                                // Remove stars
     .trim();
 };
 
-// Add this helper function near the top with your other helpers
+
 const renderHTMLText = (text) => {
   const result = [];
   const regex = /<b>(.*?)<\/b>/g;
@@ -245,11 +248,11 @@ const styles = StyleSheet.create({
   paragraph: {
     fontSize: 17,
     lineHeight: 24,
-    color: '#000', // Changed from '#555' to pure black (#000)
+    color: '#000',
     fontFamily: 'MonaSans-Regular'
   },
   boldText: {
-    fontFamily: 'MonaSans-SemiBold' // updated to semibold
+    fontFamily: 'MonaSans-SemiBold'
   },
   listItem: {
     flexDirection: 'row',

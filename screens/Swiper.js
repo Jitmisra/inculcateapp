@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden' // Add this to prevent text overflow
   },
   description: {
-    fontSize: responsiveFontSize(15.4),
+    fontSize: responsiveFontSize(15.5),
     fontFamily: 'MonaSans-Regular',
     lineHeight: responsiveFontSize(16) * 1.05
   },

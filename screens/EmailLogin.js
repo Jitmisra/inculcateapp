@@ -116,7 +116,7 @@ const EmailLogin = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}  // adjust as needed
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
       <ImageBackground 
         source={require('../assets/images/backgrounds/login-background.png')} 
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   imageBackground: {
     flex: 1,
-    resizeMode: 'cover' // adjust if needed
+    resizeMode: 'cover'
   },
   overlay: {
     flex: 1,
