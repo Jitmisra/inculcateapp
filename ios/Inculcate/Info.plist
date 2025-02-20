@@ -27,7 +27,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>com.agnikmisra.MOVIE</string>
+          <string>com.agnikmisra.movie</string>
         </array>
       </dict>
     </array>
