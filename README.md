@@ -1,2 +1,1 @@
-# Inculcate
 # inculcateapp
