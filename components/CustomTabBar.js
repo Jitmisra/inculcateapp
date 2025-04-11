@@ -3,12 +3,12 @@ import { View, TouchableOpacity, Image, Animated, StyleSheet } from 'react-nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 
-const CustomTab = ({ activeTab = 'Homescreen', onTabPress }) => {
+const CustomTab = ({ activeTab = 'HomeScreen', onTabPress }) => {
   const navigation = useNavigation();
 
   const tabs = [
     { 
-      name: 'Homescreen', 
+      name: 'HomeScreen', 
       icon: require('../assets/images/Icons/bottombar/Homeicon.png'), 
       activeIcon: require('../assets/images/Icons/bottombar/Homeiconactive.png'),
       size: { width: 24, height: 25 }

@@ -6,7 +6,6 @@ import {
   TextInput, 
   TouchableOpacity,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
   StyleSheet,
   Alert,
@@ -17,6 +16,8 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
+// Import Amplitude Analytics
+import * as amplitude from '@amplitude/analytics-react-native';
 
 const EmailLogin = () => {
   const navigation = useNavigation();
@@ -79,7 +80,7 @@ const EmailLogin = () => {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        'https://app.error6o6.tech/api/consumer/v1/auth/',
+        'https://rail.app.error6o6.tech/api/consumer/v1/auth/',
         { email, password },
         { timeout: 5000 }
       );
@@ -92,6 +93,8 @@ const EmailLogin = () => {
           ['userId', response.data.user.id.toString()]
         ]);
 
+        // Track successful login only
+        amplitude.track('Login Success', { email });
         navigation.replace('Swiper2');
       }
     } catch (error) {
@@ -159,9 +162,9 @@ const EmailLogin = () => {
                 )}
               </TouchableOpacity>
               {!isKeyboardVisible && (
-              <Text style={styles.infoText}>
-                By clicking Login, you are agreeing to our Terms of Service and Privacy Policy
-              </Text>
+                <Text style={styles.infoText}>
+                  By clicking Login, you are agreeing to our Terms of Service and Privacy Policy
+                </Text>
               )}
             </View>
           </View>

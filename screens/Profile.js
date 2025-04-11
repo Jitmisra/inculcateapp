@@ -15,8 +15,9 @@ import {
 import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CustomTab from './CustomTabBar';
+import CustomTab from '../components/CustomTabBar';
 import Header from '../components/TransparentHeader';
+import * as amplitude from '@amplitude/analytics-react-native';
 
 const { height } = Dimensions.get('window');
 const imageSize = height * 0.10;
@@ -66,6 +67,12 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
+      // Track logout event before clearing storage
+      amplitude.track('LogoutSelected', {
+        userEmail: email,
+        userName: name
+      });
+      
       await AsyncStorage.multiRemove([
         'userToken',
         'userEmail',

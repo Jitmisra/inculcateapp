@@ -17,7 +17,7 @@ import Whiteheader from '../components/Whiteheader';
 const Quiz = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
-  const correctAnswer = 1; // Index of correct answer (Project Sakhi)
+  const correctAnswer = 1; 
 
   const [fontsLoaded] = useFonts({
     'MonaSans-Bold': require('../assets/fonts/MonaSans-Bold.ttf'),

@@ -15,7 +15,7 @@ import {
   Dimensions
 } from 'react-native';
 import axios from 'axios';
-import Swiper from 'react-native-swiper';
+import Carousel from 'react-native-snap-carousel-v4';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
@@ -324,14 +324,14 @@ const styles = StyleSheet.create({
     numberOfLines: 2,
     ellipsizeMode: 'tail',
     adjustsFontSizeToFit: true,
-    minimumFontScale: 0.7 // Adjust this value as needed
+    minimumFontScale: 0.7 
   },
     descriptionContainer: {
       width: wp(90),
       height: "42%",
       position: 'absolute',
       top: hp(42),
-      overflow: 'hidden' // Add this to prevent text overflow
+      overflow: 'hidden' 
     },
     description: {
       fontSize: responsiveFontSize(15.5),
@@ -374,7 +374,7 @@ const SwipePage2 = () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (!token) throw new Error('No token available');
-        const response = await axios.get('https://app.error6o6.tech/api/consumer/v1/article/short', {
+        const response = await axios.get('https://rail.app.error6o6.tech/api/consumer/v1/article/short', {
           headers: { Authorization: `Bearer ${token}` }
         });
         const capsuleArray = response.data?.knowledge_capsule || [];
@@ -436,6 +436,54 @@ const SwipePage2 = () => {
     }
   }
 
+  const windowWidth = Dimensions.get('window').width;
+  
+  const renderItem = ({ item, index }) => {
+    if(item.isQuiz) {
+      return <QuizSlide quiz={item.quiz} />;
+    }
+    return (
+      <View style={styles.slide}>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <Text
+          style={styles.title}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.7}
+        >
+          {removeStars(item.title) || 'No Title Available'}
+        </Text>
+        <ScrollView
+          style={styles.descriptionContainer}
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text
+            style={styles.description}
+            adjustsFontSizeToFit={true}
+            numberOfLines={Math.floor(hp(42) * 0.8)}
+            minimumFontScale={0.5}
+          >
+            {removeStars(item.description2) || 'No Description Available'}
+          </Text>
+        </ScrollView>
+        <TouchableOpacity
+          style={styles.readMore}
+          onPress={() => {
+            navigation.push("LongPage", { id: item.id, articleData: item });
+          }}
+        >
+          <Text>Tap to Learn More →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   if (!fontsLoaded) {
     return <ActivityIndicator size="large" color="#FF6A34" />;
   }
@@ -446,60 +494,17 @@ const SwipePage2 = () => {
       <SafeAreaView style={{ flex: 1 }}>
         <Whiteheader2 />
         <View style={{ flex: 1 }}>
-          <Swiper
-            style={styles.wrapper}
-            showsPagination={false}
-            horizontal={false}
-            index={0}
+          <Carousel
+            data={slides}
+            renderItem={renderItem}
+            sliderWidth={windowWidth}
+            itemWidth={windowWidth}
             loop={true}
-            ref={swiperRef}
-            removeClippedSubviews={true}
-          >
-            {slides.map((item, index) =>
-              item.isQuiz ? (
-                <QuizSlide quiz={item.quiz} key={`quiz-${index}`} />
-              ) : (
-                <View style={styles.slide} key={index}>
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.image}
-                    resizeMode="cover"
-                  />
-                  <Text
-                    style={styles.title}
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                    adjustsFontSizeToFit={true}
-                    minimumFontScale={0.7} // Adjust this value as needed
-                  >
-                    {removeStars(item.title) || 'No Title Available'}
-                  </Text>
-                  <ScrollView
-                                     style={styles.descriptionContainer}
-                                     nestedScrollEnabled={true}
-                                     showsVerticalScrollIndicator={false}
-                                   >
-                                    <Text
-                                                          style={styles.description}
-                                                          adjustsFontSizeToFit={true}
-                                                          numberOfLines={Math.floor(hp(42) * 0.8)} // Dynamically calculate number of lines based on container height
-                                                          minimumFontScale={0.5} // This will allow text to shrink to 50% of original size if needed
-                                                        >
-                                       {removeStars(item.description2) || 'No Description Available'}
-                                     </Text>
-                                   </ScrollView>
-                  <TouchableOpacity
-                    style={styles.readMore}
-                    onPress={() => {
-                      navigation.push("LongPage", { id: item.id, articleData: item });
-                    }}
-                  >
-                    <Text>Tap to Learn More →</Text>
-                  </TouchableOpacity>
-                </View>
-              )
-            )}
-          </Swiper>
+            layout={'tinder'} 
+    stack  layoutCardOffset={`9`}
+            verticl={true}
+            
+          />
         </View>
       </SafeAreaView>
     </View>

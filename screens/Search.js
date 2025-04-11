@@ -17,6 +17,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { useFonts } from 'expo-font';
+// Import Amplitude Analytics
+import * as amplitude from '@amplitude/analytics-react-native';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginHorizontal: 16,
     marginTop: 1,
-    marginBottom: 6, // added marginBottom padding under the search box
+    marginBottom: 6, 
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     fontSize: wp(4),
@@ -161,20 +163,20 @@ const Search = () => {
     'MonaSans-SemiBold': require('../assets/fonts/MonaSans-SemiBold.ttf'),
   });
 
-  // Returns the current list of articles for caching.
+
   const prevCachedArticles = () => articles;
 
   const fetchAllArticles = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
       const response = await axios.get(
-        'https://app.error6o6.tech/api/consumer/v1/article/short',
+        'https://rail.app.error6o6.tech/api/consumer/v1/article/short',
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       const capsuleArray = response.data.knowledge_capsule;
-      // Map the entire capsuleArray to your article data structure
+ 
       const allArticles = capsuleArray.map((item) => ({
         id: item.id,
         category: item.category,
@@ -187,7 +189,7 @@ const Search = () => {
       }));
       setArticles(allArticles);
       setFilteredArticles(allArticles);
-      // Optionally cache allArticles if needed
+
       AsyncStorage.setItem('cachedArticles', JSON.stringify(allArticles.slice(-10)));
     } catch (error) {
       console.error('Error fetching articles:', error);
@@ -206,6 +208,12 @@ const Search = () => {
     if (query.trim() === '') {
       setFilteredArticles(articles);
     } else {
+      // Track search query when user types
+      amplitude.track('Search Query', {
+        query: query.trim(),
+        resultCount: filteredArticles.length
+      });
+      
       const filtered = articles.filter(article => {
         const cleanTitle = removeStars(article.title || '').toLowerCase();
         const cleanDescription = removeStars(article.description || '').toLowerCase();
@@ -252,7 +260,7 @@ const Search = () => {
               style={styles.arrowIconf} 
             />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.push('Homescreen')}>
+          <TouchableOpacity onPress={() => navigation.push('HomeScreen')}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ color: '#FF6A34', fontSize: 24, fontWeight: '600' }}>in.</Text>
               <Text style={{ color: '#25252D', fontSize: 24, fontWeight: '600' }}>culcate</Text>
@@ -275,10 +283,14 @@ const Search = () => {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.itemContainer}
-                onPress={() => navigation.navigate('SwipePage', { 
-                  data: articles,
-                  articleId: item.id 
-                })}
+                onPress={() => {
+                  // Track detailed article selection event
+                  amplitude.track('Search Result Selected', { id: item.id, title: item.title });
+                  navigation.navigate('SwipePage', { 
+                    articleId: item.id,
+                    articleData: item  // Pass the full article data object
+                  });
+                }}
               >
                 <Image 
                   source={{ uri: item.image }} 

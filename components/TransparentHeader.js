@@ -1,6 +1,7 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
+import * as amplitude from '@amplitude/analytics-react-native';
 
 const Header = () => {
   const navigation = useNavigation();
@@ -10,17 +11,23 @@ const Header = () => {
       <View style={styles.spacer} />
       
       <TouchableOpacity 
-        onPress={() => navigation.push('Homescreen')}
-        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-      >
-        <View style={styles.titleContainer}>
-          <Text style={styles.firstTitle}>in.</Text>
-          <Text style={styles.secondTitle}>culcate</Text>
-        </View>
-      </TouchableOpacity>
+              onPress={() => {
+                amplitude.track('HomeScreenSelected');
+                navigation.push('HomeScreen');
+              }}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: '#FF6A34', fontSize: 24, fontWeight: '600' }}>in.</Text>
+                <Text style={{ color: '#25252D', fontSize: 24, fontWeight: '600' }}>culcate</Text>
+              </View>
+            </TouchableOpacity>
       
       <TouchableOpacity 
-        onPress={() => navigation.push('Search')}
+        onPress={() => {
+          amplitude.track('SearchSelected');
+          navigation.push('Search');
+        }}
         hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
       >
         <Image 

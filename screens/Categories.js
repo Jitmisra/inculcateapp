@@ -12,10 +12,10 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
-  Dimensions  // added Dimensions import
+  Dimensions  
 } from 'react-native';
-  
-// Add a responsive font-size helper.
+import * as amplitude from '@amplitude/analytics-react-native';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const guidelineBaseWidth = 375;
 const responsiveFontSize = (size) => Math.round(size * (SCREEN_WIDTH / guidelineBaseWidth));
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     height: "42%",
     position: 'absolute',
     top: hp(42),
-    overflow: 'hidden' // Add this to prevent text overflow
+    overflow: 'hidden'
   },
   description: {
     fontSize: responsiveFontSize(15.5),
@@ -258,6 +258,12 @@ const QuizSlide = ({ quiz, navigation }) => {
       setSelectedOption(index);
       setIsAnswered(true);
       setBottomSheetVisible(true);
+      // Track quiz answer event with amplitude
+      amplitude.track('Quiz Answered', {
+        question: quiz.question,
+        selectedAnswer: index,
+        correctAnswer: quiz.correct
+      });
     }
   };
 
@@ -360,7 +366,7 @@ const QuizSlide = ({ quiz, navigation }) => {
   );
 };
 
-const SwipePage = () => {
+const Swipercatagories = () => {
   const [fontsLoaded] = useFonts({
     'MonaSans-Bold': require('../assets/fonts/MonaSans-Bold.ttf'),
     'MonaSans-Regular': require('../assets/fonts/MonaSans-Regular.ttf'),
@@ -385,7 +391,7 @@ const SwipePage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
 
-  // Modified useEffect to handle both category and regular articles
+
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -405,7 +411,7 @@ const SwipePage = () => {
         }
 
         const response = await axios.get(
-          'https://app.error6o6.tech/api/consumer/v1/article/short',
+          'https://rail.app.error6o6.tech/api/consumer/v1/article/short',
           {
             headers: { Authorization: `Bearer ${token}` }
           }
@@ -433,12 +439,12 @@ const SwipePage = () => {
     fetchArticles();
   }, [categoryName, categoryArticles]);
 
-  // Find the index of the article with the passed articleId
+
   useEffect(() => {
     if (isLoaded && articleId && articles.length) {
       const articleIndex = articles.findIndex(article => article.id === articleId);
       if (articleIndex !== -1) {
-        // Adjust for inserted quiz slides: add one extra slide for every five articles before articleIndex.
+       
         const adjustment = Math.floor(articleIndex / 5);
         setInitialIndex(articleIndex + adjustment);
       }
@@ -499,7 +505,7 @@ const SwipePage = () => {
     }
   }
 
-  // Add this helper function at the top of the file, before the styles
+  // Helper function to remove stars from a text
   const removeStars = (text) => {
     if (!text) return '';
     return text.replace(/\*+/g, '');
@@ -515,7 +521,7 @@ const SwipePage = () => {
             style={styles.wrapper}
             showsPagination={false}
             horizontal={false}
-            index={0}  // initial index will be scrolled to with scrollBy
+            index={0} 
             loop={false}
             ref={swiperRef}
             removeClippedSubviews={false}
@@ -536,7 +542,7 @@ const SwipePage = () => {
                     numberOfLines={2}
                     ellipsizeMode="tail"
                     adjustsFontSizeToFit={true}
-                    minimumFontScale={0.9} // Adjust as needed
+                    minimumFontScale={0.9}
                   >
                     {removeStars(item.title) || 'No Title Available'}
                   </Text>
@@ -545,12 +551,12 @@ const SwipePage = () => {
                     nestedScrollEnabled={true}
                     showsVerticalScrollIndicator={false}
                   >
-                   <Text
-                                         style={styles.description}
-                                         adjustsFontSizeToFit={true}
-                                         numberOfLines={Math.floor(hp(42) * 0.8)} // Dynamically calculate number of lines based on container height
-                                         minimumFontScale={0.9} // This will allow text to shrink to 50% of original size if needed
-                                       >
+                    <Text
+                      style={styles.description}
+                      adjustsFontSizeToFit={true}
+                      numberOfLines={Math.floor(hp(42) * 0.8)} 
+                      minimumFontScale={0.9}
+                    >
                       {removeStars(item.description2) || 'No Description Available'}
                     </Text>
                   </ScrollView>
@@ -558,6 +564,10 @@ const SwipePage = () => {
                     style={styles.readMore}
                     onPress={() => {
                       console.log("Navigating with id:", item.id);
+                      amplitude.track('Detailed Article Selected', { 
+                        id: item.id, 
+                        title: item.title 
+                      });
                       navigation.push("LongPage", { id: item.id });
                     }}
                   >
@@ -573,4 +583,4 @@ const SwipePage = () => {
   );
 };
 
-export default SwipePage;
+export default Swipercatagories;

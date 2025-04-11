@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -8,7 +8,9 @@ import {
     StyleSheet,
     Platform,
     StatusBar,
-    ActivityIndicator
+    ActivityIndicator,
+    Animated, // Add Animated import
+    Dimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Whiteheader from '../components/Whiteheader';
@@ -16,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { useFonts } from 'expo-font';
 import { createEditorJsViewer } from 'editorjs-viewer-native';
+import * as amplitude from '@amplitude/analytics-react-native';
 
 // Add this helper function
 const removeStars = (text) => {
@@ -118,6 +121,76 @@ const EditorJsViewerNative = createEditorJsViewer({
   }
 });
 
+// Add skeleton component
+const Skeleton = ({ width, height, style }) => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+  
+  const translateX = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-width, width],
+  });
+  
+  return (
+    <View style={[{ width, height, backgroundColor: '#E0E0E0', overflow: 'hidden', borderRadius: 4 }, style]}>
+      <Animated.View 
+        style={{
+          width: '100%',
+          height: '100%',
+          transform: [{ translateX }],
+          backgroundColor: 'rgba(255,255,255,0.3)',
+        }}
+      />
+    </View>
+  );
+};
+
+// Article skeleton component
+const ArticleSkeleton = () => {
+  const screenWidth = Dimensions.get('window').width;
+  const contentWidth = screenWidth - 40; // 20px padding on each side
+  
+  return (
+    <View style={styles.scrollContainer}>
+      <Skeleton width={contentWidth} height={200} style={{ marginBottom: 20 }} />
+      <Skeleton width={contentWidth * 0.8} height={30} style={{ marginBottom: 30, alignSelf: 'center' }} />
+      
+      {/* Subtitle skeletons */}
+      <Skeleton width={contentWidth * 0.6} height={24} style={{ marginBottom: 15 }} />
+      
+      {/* Paragraph skeletons */}
+      {[...Array(5)].map((_, i) => (
+        <View key={i} style={{ marginBottom: 10 }}>
+          <Skeleton width={contentWidth} height={16} style={{ marginBottom: 5 }} />
+          <Skeleton width={contentWidth * 0.95} height={16} style={{ marginBottom: 5 }} />
+          <Skeleton width={contentWidth * 0.7} height={16} />
+        </View>
+      ))}
+      
+      {/* Another subtitle */}
+      <Skeleton width={contentWidth * 0.5} height={24} style={{ marginTop: 25, marginBottom: 15 }} />
+      
+      {/* More paragraphs */}
+      {[...Array(3)].map((_, i) => (
+        <View key={i + 5} style={{ marginBottom: 10 }}>
+          <Skeleton width={contentWidth} height={16} style={{ marginBottom: 5 }} />
+          <Skeleton width={contentWidth * 0.9} height={16} style={{ marginBottom: 5 }} />
+          <Skeleton width={contentWidth * 0.8} height={16} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
 const LongPage = ({ route }) => {
   const navigation = useNavigation();
   const { id } = route.params;
@@ -142,7 +215,7 @@ const LongPage = ({ route }) => {
           return;
         }
         console.log('Retrieved token:', token);
-        const url = `https://app.error6o6.tech/api/consumer/v1/article/long/${id}`;
+        const url = `https://rail.app.error6o6.tech/api/consumer/v1/article/long/${id}`;
         console.log('Request URL:', url);
         const response = await axios.get(url, {
           headers: {
@@ -160,6 +233,24 @@ const LongPage = ({ route }) => {
     fetchArticle();
   }, [id]);
 
+  // Track the duration spent on the detailed article once articleData is loaded.
+  useEffect(() => {
+    if (articleData) {
+      const startTime = Date.now();
+      return () => {
+        const viewDurationMinutes = parseFloat(
+          ((Date.now() - startTime) / (1000 * 60)).toFixed(2)
+        ); // duration in minutes with 2 decimal places
+        const title = removeStars(articleData.Long_title || articleData.title);
+        amplitude.track('Detailed Article Duration', { 
+          article_id: id,
+          article_title: removeStars(articleData.Long_title || articleData.title),
+          duration_minutes: viewDurationMinutes
+        });
+      };
+    }
+  }, [articleData, id]);
+
   const parseEditorJsContent = (content) => {
     try {
       if (typeof content === 'string') {
@@ -175,9 +266,10 @@ const LongPage = ({ route }) => {
   if (!fontsLoaded || loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#FF6A34" />
-        </View>
+        <Whiteheader />
+        <ScrollView>
+          <ArticleSkeleton />
+        </ScrollView>
       </SafeAreaView>
     );
   }
