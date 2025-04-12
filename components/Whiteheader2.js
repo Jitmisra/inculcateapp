@@ -9,7 +9,7 @@ const Whiteheader2 = () => {
   return (
     <View
       style={{
-        height: hp('8'),
+        flex:0.07,
         backgroundColor: '#fff',
         flexDirection: 'row',
         justifyContent: 'space-between',

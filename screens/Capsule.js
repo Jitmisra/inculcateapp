@@ -20,7 +20,7 @@ import axios from 'axios';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-import Whiteheader2 from '../components/Whiteheader2';
+import Whiteheader2 from '../components/Whiteheader';
 import { useFonts } from 'expo-font';
 // Import Amplitude Analytics
 import * as amplitude from '@amplitude/analytics-react-native';
@@ -431,6 +431,7 @@ const styles = StyleSheet.create({
 const SwipePage = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const slideHeight1 = useRef(0);
   
   const [fontsLoaded] = useFonts({
     'MonaSans-Bold': require('../assets/fonts/MonaSans-Bold.ttf'),
@@ -747,8 +748,8 @@ const SwipePage = () => {
 
   // This function provides exact item layout information to help FlatList scroll accurately
   const getItemLayout = (data, index) => ({
-    length: slideHeight,
-    offset: slideHeight * index,
+    length:  slideHeight1.current,
+    offset:  slideHeight1.current * index,
     index,
   });
 
@@ -810,7 +811,7 @@ const SwipePage = () => {
   // Render an item in the FlatList
   const renderItem = ({ item, index }) => {
     return (
-      <View style={{ height: slideHeight, width: '100%' }}>
+      <View style={{ height:  slideHeight1.current, width: '100%' }}>
         {item.isQuiz ? (
           <QuizSlide quiz={item.quiz} />
         ) : (
@@ -929,14 +930,14 @@ const SwipePage = () => {
         <SafeAreaView style={{ flex: 1 }}>
           <Whiteheader2 />
           <View 
-            style={{ height: slideHeight }}
+            style={{ height:  slideHeight1.current }}
             ref={initialViewRef}
             onLayout={() => {
               // After the first render with single article, mark scroll as complete to allow normal browsing
               setInitialScrollComplete(true);
             }}
           >
-            <View style={{ height: slideHeight, width: '100%' }}>
+            <View style={{ height:  slideHeight1.current, width: '100%' }}>
               <View style={styles.slide}>
                 <View style={styles.imageContainer}>
                   <Image
@@ -996,7 +997,9 @@ const SwipePage = () => {
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
       <SafeAreaView style={{ flex: 1 }}>
         <Whiteheader2 />
-        <View style={{ height: slideHeight }}>
+        <View onLayout={(e) => {
+          slideHeight1.current = e.nativeEvent.layout.height;
+          console.log(e.nativeEvent.layout.height)}} style={{ flex: 0.93 }}>
           <FlatList
             ref={flatListRef}
             data={slides}
@@ -1005,13 +1008,13 @@ const SwipePage = () => {
             pagingEnabled
             initialScrollIndex={singleArticle && targetArticleId ? 0 : currentSlideIndex}
             showsVerticalScrollIndicator={false}
-            snapToInterval={slideHeight}
+            snapToInterval={ slideHeight1.current}
             snapToAlignment="start"
             decelerationRate="fast"
             getItemLayout={getItemLayout}
             onScroll={(event) => {
               const slideIndex = Math.round(
-                event.nativeEvent.contentOffset.y / slideHeight
+                event.nativeEvent.contentOffset.y /  slideHeight1.current
               );
               
               if (slideIndex !== currentSlideIndex) {

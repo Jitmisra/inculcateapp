@@ -14,7 +14,8 @@ import {
   ActivityIndicator,
   Dimensions,
   PanResponder,  // <-- added PanResponder import
-  Animated // Add Animated import
+  Animated, // Add Animated import
+  FlatList // Add FlatList import
 } from 'react-native';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
@@ -29,6 +30,8 @@ import * as amplitude from '@amplitude/analytics-react-native';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const guidelineBaseWidth = 375;
 const responsiveFontSize = (size) => Math.round(size * (SCREEN_WIDTH / guidelineBaseWidth));
+
+
 
 // Helper function
 const removeStars = (text) => {
@@ -488,6 +491,7 @@ const styles = StyleSheet.create({
 
 const Swiper2 = () => {
   const navigation = useNavigation();
+  const slideHeight1 = useRef(0);
 
   const [fontsLoaded] = useFonts({
     'MonaSans-Bold': require('../assets/fonts/MonaSans-Bold.ttf'),
@@ -511,7 +515,7 @@ const Swiper2 = () => {
   const loadMoreThreshold = 8; // New constant to determine when to load more articles
   
   const slideHeight = Dimensions.get('window').height - hp(15);
-  const scrollViewRef = useRef(null);
+  const flatListRef = useRef(null);
 
   // Initial fetch - only get first 10 articles
   useEffect(() => {
@@ -727,117 +731,167 @@ const Swiper2 = () => {
     );
   };
 
+  // Add this function to get precise item layout for FlatList
+  const getItemLayout = (data, index) => ({
+    length: slideHeight1.current,
+    offset: slideHeight1.current * index,
+    index,
+  });
+
+  // Add handler for failed scroll attempts
+  const handleScrollToIndexFailed = (info) => {
+    console.log('Scroll to index failed:', info);
+    
+    // Wait a moment and retry with a different approach
+    setTimeout(() => {
+      if (flatListRef.current) {
+        // Try scrolling to a nearby index first, then to the target
+        const nearestIndex = Math.floor(info.index / 2);
+        
+        flatListRef.current.scrollToIndex({
+          index: nearestIndex,
+          animated: false
+        });
+        
+        // Then after a short delay, try scrolling to the actual target
+        setTimeout(() => {
+          flatListRef.current.scrollToIndex({
+            index: info.index,
+            animated: true
+          });
+        }, 200);
+      }
+    }, 300);
+  };
+
+  // Render an item in the FlatList
+  const renderItem = ({ item, index }) => {
+    return (
+      <View style={{ height: slideHeight1.current, width: '100%' }}>
+        {item.isQuiz ? (
+          <QuizSlide quiz={item.quiz} />
+        ) : (
+          <View style={styles.slide}>
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: item.image }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </View>
+            <View style={styles.titleContainer}>
+              <Text
+                style={styles.title}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.7}
+              >
+                {removeStars(item.title) || 'No Title Available'}
+              </Text>
+            </View>
+            {renderTags(item, 3)}
+            <View style={styles.descriptionOuterContainer}>
+              <ScrollView
+                style={styles.descriptionContainer}
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text
+                  style={styles.description}
+                  adjustsFontSizeToFit={true}
+                  numberOfLines={Math.floor(hp(42) * 0.8)}
+                  minimumFontScale={0.5}
+                >
+                  {removeStars(item.description2) || 'No Description Available'}
+                </Text>
+              </ScrollView>
+            </View>
+            <TouchableOpacity
+              style={styles.readMore}
+              onPress={() => {
+                amplitude.track('Detailed Article Selected', { id: item.id, title: item.title });
+                navigation.push("LongPage", { id: item.id, articleData: item });
+              }}
+            >
+              <Text>Tap to Learn More →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   if (!fontsLoaded) {
     return <ActivityIndicator size="large" color="#FF6A34" />;
   }
+ 
 
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
       <SafeAreaView style={{ flex: 1 }}>
         <Whiteheader2 />
-        {/* Updated slider: a ScrollView occupying full height below Whiteheader2 */}
-        <View style={{ height: slideHeight }}>
+        <View onLayout={(e) => {
+          slideHeight1.current = e.nativeEvent.layout.height;
+          console.log(e.nativeEvent.layout.height)}} style={{ flex: 0.93 }}>
           {!isDataReady ? (
             // Show skeleton UI while loading
             <SkeletonArticle />
           ) : (
-            <ScrollView
-              ref={scrollViewRef}
+            <FlatList
+              ref={flatListRef}
+              data={slides}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => item.isQuiz ? `quiz-${index}` : `article-${item.id}`}
               pagingEnabled
+              initialScrollIndex={currentSlideIndex}
               showsVerticalScrollIndicator={false}
-              onScroll={handleScroll}  // Added onScroll handler
-              scrollEventThrottle={16} // Optimize scroll event firing
-              onMomentumScrollEnd={(e) => {
-                const scrollHeight = e.nativeEvent.layoutMeasurement.height;
-                const newIndex = Math.round(e.nativeEvent.contentOffset.y / scrollHeight);
+              snapToInterval={slideHeight1.current}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              
+              getItemLayout={getItemLayout}
+              onScroll={(event) => {
+                const slideIndex = Math.round(
+                  event.nativeEvent.contentOffset.y / slideHeight1.current
+                );
                 
-                // Only process if the index has actually changed
-                if (newIndex !== currentSlideIndex) {
-                  console.log("Slide index:", newIndex);
-                  const currentSlide = slides[newIndex];
-                  if (currentSlide && !currentSlide.isQuiz) {
-                    console.log("id:", currentSlide.id); // using id from formattedData (item.id)
-                  } else if (currentSlide && currentSlide.isQuiz) {
-                    console.log("Quiz slide");
-                  }
-                  
-                  handleSlideChange(newIndex);
+                if (slideIndex !== currentSlideIndex) {
+                  handleSlideChange(slideIndex);
                 }
               }}
-              // Add these props to optimize scrolling performance
+              scrollEventThrottle={23}
+              onScrollToIndexFailed={handleScrollToIndexFailed}
+              onMomentumScrollEnd={(e) => {
+                const slideIndex = Math.round(
+                  e.nativeEvent.contentOffset.y / slideHeight1.current
+                );
+                
+                // Only process if the index has actually changed
+                if (slideIndex !== currentSlideIndex) {
+                  handleSlideChange(slideIndex);
+                }
+              }}
+              // Performance optimizations
               removeClippedSubviews={true}
-              maxToRenderPerBatch={3}
-              windowSize={5}
-              initialNumToRender={6} // Render enough for index 4 to exist
-            >
-              {slides.map((item, index) => (
-                <View style={{ height: slideHeight }} key={index}>
-                  {item.isQuiz ? (
-                    <QuizSlide quiz={item.quiz} />
-                  ) : (
-                    // Removed PanResponder swipe gesture detection
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.slide}>
-                        {/* ...existing article slide code... */}
-                        <View style={styles.imageContainer}>
-                          <Image
-                            source={{ uri: item.image }}
-                            style={styles.image}
-                            resizeMode="cover"
-                          />
-                        </View>
-                        <View style={styles.titleContainer}>
-                          <Text
-                            style={styles.title}
-                            numberOfLines={2}
-                            ellipsizeMode="tail"
-                            adjustsFontSizeToFit={true}
-                            minimumFontScale={0.7}
-                          >
-                            {removeStars(item.title) || 'No Title Available'}
-                          </Text>
-                        </View>
-                        {renderTags(item, 3)}
-                        <View style={styles.descriptionOuterContainer}>
-                          <ScrollView
-                            style={styles.descriptionContainer}
-                            nestedScrollEnabled={true}
-                            showsVerticalScrollIndicator={false}
-                          >
-                            <Text
-                              style={styles.description}
-                              adjustsFontSizeToFit={true}
-                              numberOfLines={Math.floor(hp(42) * 0.8)}
-                              minimumFontScale={0.5}
-                            >
-                              {removeStars(item.description2) || 'No Description Available'}
-                            </Text>
-                          </ScrollView>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.readMore}
-                          onPress={() => {
-                            amplitude.track('Detailed Article Selected', { id: item.id, title: item.title });
-                            navigation.push("LongPage", { id: item.id, articleData: item });
-                          }}
-                        >
-                          <Text>Tap to Learn More →</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              ))}
-              
-              {/* Show loading indicator at bottom when loading more */}
-              {isLoadingMore && (
+              maxToRenderPerBatch={5}
+              windowSize={11}
+              initialNumToRender={5}
+              // Load more articles when reaching near the end
+              onEndReached={() => loadMoreArticles()}
+              onEndReachedThreshold={0.5}
+              // Show footer when loading more
+              ListFooterComponent={isLoadingMore ? (
                 <View style={{ padding: 20, alignItems: 'center' }}>
                   <ActivityIndicator size="small" color="#FF6A34" />
                   <Text style={{ marginTop: 5 }}>Loading more articles...</Text>
                 </View>
-              )}
-            </ScrollView>
+              ) : null}
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+              }}
+            />
           )}
         </View>
         {/* ...existing tags modal code... */}
